@@ -59,7 +59,7 @@ def _default_long_desc(obj):
 def register(model, import_unmoderated=False, auto_moderator=None, long_desc=None,
              manager_name='objects', status_name='moderation_status',
              flagged_name='flagged', moderation_object_name='moderation_object',
-             base_manager=None):
+             base_manager=None,moderator_list=None):
     if not model in registered_models:
         signals.post_save.connect(save_handler, sender=model)
         signals.pre_delete.connect(delete_handler, sender=model)
@@ -69,6 +69,7 @@ def register(model, import_unmoderated=False, auto_moderator=None, long_desc=Non
         registered_models[model] = {
             'auto_moderator': auto_moderator,
             'long_desc': long_desc or _default_long_desc,
+            'moderator_list': moderator_list,
         }
         if import_unmoderated:
             try:
@@ -203,7 +204,13 @@ def save_handler(sender, instance, **kwargs):
             if user and user.has_perm('gatekeeper.change_moderatedobject'):
                 mo.approve(user)
 
+        moderator_list = None
         if MODERATOR_LIST:
+            moderator_list = MODERATOR_LIST
+        if callable(registered_models[instance.__class__]['moderator_list']):
+            moderator_list = registered_models[instance.__class__]['moderator_list'](instance)            
+        
+        if moderator_list:
 
             from django.contrib.sites.models import Site
             domain = Site.objects.get(id=settings.SITE_ID).domain
@@ -226,7 +233,7 @@ def save_handler(sender, instance, **kwargs):
             # sender
             from_addr = settings.DEFAULT_FROM_EMAIL
 
-            send_mail(subject, message, from_addr, MODERATOR_LIST, fail_silently=True)
+            send_mail(subject, message, from_addr, moderator_list, fail_silently=True)
 
 def delete_handler(sender, instance, **kwargs):
     try:
