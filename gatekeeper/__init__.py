@@ -231,8 +231,10 @@ def save_handler(sender, instance, **kwargs):
         # message
         message = _long_desc(instance, long_desc)
         if status == 'Pending':
+            if callable(getattr(instance, 'get_absolute_url', None)):
+                message += "\n\nTo view, go to http://%s%s" % (domain, instance.get_absolute_url())
             message += "\n\nTo moderate, go to http://%s/admin/gatekeeper/moderatedobject/?ot=desc&moderation_status__exact=0&o=2" % domain
-
+        
         # subject
         key = "%s:%s" % (instance_class, status)
         if mo.moderation_status_by and mo.moderation_status_by.username == 'gatekeeper_automod':
