@@ -59,7 +59,7 @@ def _default_long_desc(obj):
 def register(model, import_unmoderated=False, auto_moderator=None, long_desc=None,
              manager_name='objects', status_name='moderation_status',
              flagged_name='flagged', moderation_object_name='moderation_object',
-             base_manager=None,moderator_list=None):
+             base_manager=None,moderator_list=None,notify_moderators=None):
     if not model in registered_models:
         signals.post_save.connect(save_handler, sender=model)
         signals.pre_delete.connect(delete_handler, sender=model)
@@ -70,6 +70,7 @@ def register(model, import_unmoderated=False, auto_moderator=None, long_desc=Non
             'auto_moderator': auto_moderator,
             'long_desc': long_desc or _default_long_desc,
             'moderator_list': moderator_list,
+            'notify_moderators': notify_moderators,
         }
         if import_unmoderated:
             try:
@@ -203,37 +204,45 @@ def save_handler(sender, instance, **kwargs):
             user = get_current_user()
             if user and user.has_perm('gatekeeper.change_moderatedobject'):
                 mo.approve(user)
+    else:
+        mo = ModeratedObject.objects.get(object_id=instance.id, 
+                                         content_type=ContentType.objects.get_for_model(instance))
 
-        moderator_list = None
-        if MODERATOR_LIST:
-            moderator_list = MODERATOR_LIST
-        if callable(registered_models[instance.__class__]['moderator_list']):
-            moderator_list = registered_models[instance.__class__]['moderator_list'](instance)            
+
+    if callable(registered_models[instance.__class__]['notify_moderators']):
+        if not registered_models[instance.__class__]['notify_moderators'](instance):
+            return
         
-        if moderator_list:
+    moderator_list = None
+    if MODERATOR_LIST:
+        moderator_list = MODERATOR_LIST
+    if callable(registered_models[instance.__class__]['moderator_list']):
+        moderator_list = registered_models[instance.__class__]['moderator_list'](instance)            
+    
+    if moderator_list:
 
-            from django.contrib.sites.models import Site
-            domain = Site.objects.get(id=settings.SITE_ID).domain
+        from django.contrib.sites.models import Site
+        domain = Site.objects.get(id=settings.SITE_ID).domain
 
-            status = mo.get_moderation_status_display()
-            instance_class = instance.__class__.__name__
-            long_desc = registered_models[instance.__class__]['long_desc']
+        status = mo.get_moderation_status_display()
+        instance_class = instance.__class__.__name__
+        long_desc = registered_models[instance.__class__]['long_desc']
 
-            # message
-            message = _long_desc(instance, long_desc)
-            if status == 'Pending':
-                message += "\n\nTo moderate, go to http://%s/admin/gatekeeper/moderatedobject/?ot=desc&o=2" % (message, domain)
+        # message
+        message = _long_desc(instance, long_desc)
+        if status == 'Pending':
+            message += "\n\nTo moderate, go to http://%s/admin/gatekeeper/moderatedobject/?ot=desc&o=2" % domain
 
-            # subject
-            key = "%s:%s" % (instance_class, status)
-            if mo.moderation_status_by and mo.moderation_status_by.username == 'gatekeeper_automod':
-                key = "%s:auto" % key
-            subject = "[%s] New gatekeeper object on %s" % (key, domain)
+        # subject
+        key = "%s:%s" % (instance_class, status)
+        if mo.moderation_status_by and mo.moderation_status_by.username == 'gatekeeper_automod':
+            key = "%s:auto" % key
+        subject = "[%s] New gatekeeper object on %s" % (key, domain)
 
-            # sender
-            from_addr = settings.DEFAULT_FROM_EMAIL
+        # sender
+        from_addr = settings.DEFAULT_FROM_EMAIL
 
-            send_mail(subject, message, from_addr, moderator_list, fail_silently=True)
+        send_mail(subject, message, from_addr, moderator_list, fail_silently=True)
 
 def delete_handler(sender, instance, **kwargs):
     try:
