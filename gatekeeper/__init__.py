@@ -231,7 +231,7 @@ def save_handler(sender, instance, **kwargs):
         # message
         message = _long_desc(instance, long_desc)
         if status == 'Pending':
-            message += "\n\nTo moderate, go to http://%s/admin/gatekeeper/moderatedobject/?ot=desc&o=2" % domain
+            message += "\n\nTo moderate, go to http://%s/admin/gatekeeper/moderatedobject/?ot=desc&moderation_status__exact=0&o=2" % domain
 
         # subject
         key = "%s:%s" % (instance_class, status)
