@@ -121,6 +121,10 @@ def add_fields(cls, manager_name, status_name, flagged_name,
         def rejected(self):
             return self._by_status(status_name, REJECTED_STATUS)
 
+        def not_rejected(self):
+            where_clause = '%s != %%s' % (status_name)
+            return self.extra(where=[where_clause], params=[REJECTED_STATUS])
+
         def flagged(self):
             return self._by_status(flagged_name, True)
 
