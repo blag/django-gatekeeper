@@ -80,3 +80,17 @@ class ModeratedObject(models.Model):
 
     def reject(self, user, reason=''):
         self._moderate(-1, user, reason)
+
+
+class ModerationMixin(object):
+    """
+    Chek object moderation status
+    """
+    def is_approved(self):
+        return self.moderation_status == gatekeeper.APPROVED_STATUS
+    
+    def is_rejected(self):
+        return self.moderation_status == gatekeeper.REJECTED_STATUS
+    
+    def is_pending(self):
+        return self.moderation_status == gatekeeper.PENDING_STATUS
