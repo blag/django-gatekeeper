@@ -3,14 +3,14 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 import datetime
 import gatekeeper
 
 STATUS_CHOICES = (
-    (1, "Approved"),
-    (0, "Pending"),
-    (-1, "Rejected"),
+    (1, _("Approved")),
+    (0, _("Pending")),
+    (-1, _("Rejected")),
 )
 
 STATUS_ON_FLAG = getattr(settings, "GATEKEEPER_STATUS_ON_FLAG", None)
@@ -31,18 +31,25 @@ class ModeratedObject(models.Model):
 
     timestamp = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
-    moderation_status = models.IntegerField(choices=STATUS_CHOICES)
-    moderation_status_by = models.ForeignKey(User, blank=True, null=True)
-    moderation_status_date = models.DateTimeField(blank=True, null=True)
-    moderation_reason = models.CharField(max_length=100, blank=True)
+    moderation_status = models.IntegerField(choices=STATUS_CHOICES, 
+                                verbose_name=_('moderation status'))
+    moderation_status_by = models.ForeignKey(User, blank=True, null=True, 
+                                verbose_name=_('moderation status by'))
+    moderation_status_date = models.DateTimeField(blank=True, null=True, 
+                                verbose_name=_('moderation status date'))
+    moderation_reason = models.CharField(max_length=100, blank=True,
+                                verbose_name=_('moderation reason'))
 
-    flagged = models.BooleanField(default=False)
+    flagged = models.BooleanField(default=False, verbose_name=_('flagged'))
     flagged_by = models.ForeignKey(User, blank=True, null=True,
-                                   related_name='flagged_objects')
-    flagged_date = models.DateTimeField(blank=True, null=True)
+                                   related_name='flagged objects',
+                                   verbose_name=_('flagged by'))
+    flagged_date = models.DateTimeField(blank=True, null=True,
+                                        verbose_name=_('flagged date'))
 
-    content_type = models.ForeignKey(ContentType)
-    object_id = models.PositiveIntegerField()
+    content_type = models.ForeignKey(ContentType,
+                                     verbose_name=_('content type'))
+    object_id = models.PositiveIntegerField(verbose_name=_('object id'))
     content_object = generic.GenericForeignKey('content_type', 'object_id')
 
     class Meta:
