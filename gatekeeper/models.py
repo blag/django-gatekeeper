@@ -1,8 +1,9 @@
 from django.conf import settings
-from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
+from django.contrib.contenttypes.models import ContentType
+from django.db import models
+from django.utils.translation import ugettext as _
 import datetime
 import gatekeeper
 
@@ -48,7 +49,7 @@ class ModeratedObject(models.Model):
         ordering = ['timestamp']
 
     def __unicode__(self):
-        return "[%s] %s" % (self.get_moderation_status_display(), 
+        return "[%s] %s" % (self.get_moderation_status_display(),
                             self.content_object)
 
     def get_absolute_url(self):
@@ -81,6 +82,21 @@ class ModeratedObject(models.Model):
     def reject(self, user, reason=''):
         self._moderate(-1, user, reason)
 
+    @models.permalink
+    def object_change_admin_url(self):
+        return ('admin:%s_%s_change' % (self.content_type.app_label,
+                                        self.content_type.model),
+                [self.object_id, ])
+
+    def object_change_admin_link(self):
+        try:
+            return u'<a href="%s">%s</a>' % \
+                        (self.object_change_admin_url(), _('View'))
+        except:
+            return self.get_absolute_url()
+    object_change_admin_link.allow_tags = True
+    object_change_admin_link.short_description = _('link')
+
 
 class ModerationMixin(object):
     """
@@ -88,9 +104,9 @@ class ModerationMixin(object):
     """
     def is_approved(self):
         return self.moderation_status == gatekeeper.APPROVED_STATUS
-    
+
     def is_rejected(self):
         return self.moderation_status == gatekeeper.REJECTED_STATUS
-    
+
     def is_pending(self):
         return self.moderation_status == gatekeeper.PENDING_STATUS

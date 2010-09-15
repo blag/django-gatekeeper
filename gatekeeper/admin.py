@@ -2,7 +2,8 @@ from django.contrib import admin
 from gatekeeper.models import ModeratedObject
 
 class ModeratedObjectAdmin(admin.ModelAdmin):
-    list_display = ('object_name', 'timestamp', 'moderation_status', 'flagged')
+    list_display = ('object_name', 'timestamp', 'moderation_status', \
+                    'flagged', 'object_change_admin_link')
     list_editable = ('moderation_status','flagged')
     list_filter = ['moderation_status','flagged','content_type']
 
