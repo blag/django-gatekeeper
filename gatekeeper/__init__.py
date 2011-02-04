@@ -10,12 +10,12 @@ from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
 from django.db.models import Manager, signals
 from django.dispatch import Signal
-from gatekeeper.middleware import get_current_user
+from gatekeeper.middleware import get_current_user, get_current_user_ip
 from gatekeeper.models import ModeratedObject
 import datetime
 
 REJECTED_STATUS = -1
-PENDING_STATUS  = 0
+PENDING_STATUS = 0
 APPROVED_STATUS = 1
 
 ENABLE_AUTOMODERATION = getattr(settings, "GATEKEEPER_ENABLE_AUTOMODERATION", False)
@@ -59,12 +59,12 @@ def _default_long_desc(obj):
 def register(model, import_unmoderated=False, auto_moderator=None, long_desc=None,
              manager_name='objects', status_name='moderation_status',
              flagged_name='flagged', moderation_object_name='moderation_object',
-             base_manager=None,moderator_list=None,notify_moderators=None):
+             base_manager=None, moderator_list=None, notify_moderators=None):
     if not model in registered_models:
         signals.post_save.connect(save_handler, sender=model)
         signals.pre_delete.connect(delete_handler, sender=model)
         # pass extra params onto add_fields to define what fields are named
-        add_fields(model, manager_name, status_name, flagged_name, 
+        add_fields(model, manager_name, status_name, flagged_name,
                    moderation_object_name, base_manager)
         registered_models[model] = {
             'auto_moderator': auto_moderator,
@@ -152,9 +152,9 @@ def add_fields(cls, manager_name, status_name, flagged_name,
                       '_moderation_status':'%s.moderation_status' % GATEKEEPER_TABLE,
                       '_flagged':'%s.flagged' % GATEKEEPER_TABLE}
             where = ['%s.content_type_id=%s' % (GATEKEEPER_TABLE, content_type),
-                     '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, 
+                     '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table,
                                              pk_name)]
-            tables=[GATEKEEPER_TABLE]
+            tables = [GATEKEEPER_TABLE]
 
             # build extra query then copy model/query to a GatekeeperQuerySet
             q = super(GatekeeperManager, self).get_query_set().extra(
@@ -185,11 +185,14 @@ def add_fields(cls, manager_name, status_name, flagged_name,
 def save_handler(sender, instance, **kwargs):
 
     if kwargs.get('created', None):
+        user = get_current_user()
 
         mo = ModeratedObject(
             moderation_status=DEFAULT_STATUS,
             content_object=instance,
-            timestamp=datetime.datetime.now())
+            timestamp=datetime.datetime.now(),
+            created_by=user if user and not user.is_anonymous() else None,
+            created_ip=get_current_user_ip())
         mo.save()
 
         # do automoderation
@@ -205,24 +208,23 @@ def save_handler(sender, instance, **kwargs):
 
         # do old-style automoderation if automoderator did nothing
         if ENABLE_AUTOMODERATION and mo.moderation_status == PENDING_STATUS:
-            user = get_current_user()
             if user and user.has_perm('gatekeeper.change_moderatedobject'):
                 mo.approve(user)
     else:
-        mo = ModeratedObject.objects.get(object_id=instance.id, 
+        mo = ModeratedObject.objects.get(object_id=instance.id,
                                          content_type=ContentType.objects.get_for_model(instance))
 
 
     if callable(registered_models[instance.__class__]['notify_moderators']):
         if not registered_models[instance.__class__]['notify_moderators'](instance):
             return
-        
+
     moderator_list = None
     if MODERATOR_LIST:
         moderator_list = MODERATOR_LIST
     if callable(registered_models[instance.__class__]['moderator_list']):
-        moderator_list = registered_models[instance.__class__]['moderator_list'](instance)            
-    
+        moderator_list = registered_models[instance.__class__]['moderator_list'](instance)
+
     if moderator_list:
 
         from django.contrib.sites.models import Site
@@ -238,7 +240,7 @@ def save_handler(sender, instance, **kwargs):
             if callable(getattr(instance, 'get_absolute_url', None)):
                 message += "\n\nTo view, go to http://%s%s" % (domain, instance.get_absolute_url())
             message += "\n\nTo moderate, go to http://%s/admin/gatekeeper/moderatedobject/?ot=desc&moderation_status__exact=0&o=2" % domain
-        
+
         # subject
         key = "%s:%s" % (instance_class, status)
         if mo.moderation_status_by and mo.moderation_status_by.username == 'gatekeeper_automod':

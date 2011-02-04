@@ -29,13 +29,14 @@ class ModeratedObject(models.Model):
 
     objects = ModeratedObjectManager()
 
-    timestamp = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True, blank=True, null=True, \
+                                     verbose_name="created date")
 
-    moderation_status = models.IntegerField(choices=STATUS_CHOICES, 
+    moderation_status = models.IntegerField(choices=STATUS_CHOICES,
                                 verbose_name=_('moderation status'))
-    moderation_status_by = models.ForeignKey(User, blank=True, null=True, 
+    moderation_status_by = models.ForeignKey(User, blank=True, null=True,
                                 verbose_name=_('moderation status by'))
-    moderation_status_date = models.DateTimeField(blank=True, null=True, 
+    moderation_status_date = models.DateTimeField(blank=True, null=True,
                                 verbose_name=_('moderation status date'))
     moderation_reason = models.CharField(max_length=100, blank=True,
                                 verbose_name=_('moderation reason'))
@@ -51,6 +52,11 @@ class ModeratedObject(models.Model):
                                      verbose_name=_('content type'))
     object_id = models.PositiveIntegerField(verbose_name=_('object id'))
     content_object = generic.GenericForeignKey('content_type', 'object_id')
+
+    created_ip = models.IPAddressField(_('Created user IP'), blank=True, null=True)
+    created_by = models.ForeignKey(User, blank=True, null=True, \
+                                   related_name="created_moderated_objects",
+                                   verbose_name=_('created by'))
 
     class Meta:
         ordering = ['timestamp']
