@@ -221,7 +221,7 @@ def save_handler(sender, instance, **kwargs):
             key = "%s:%s" % (instance_class, status)
             if mo.moderation_status_by and mo.moderation_status_by.username == 'gatekeeper_automod':
                 key = "%s:auto" % key
-            subject = "[%s] New gatekeeper object on %s" % (key, domain)
+            subject = "[%s] Item requires moderation on %s" % (key, domain)
 
             # sender
             from_addr = settings.DEFAULT_FROM_EMAIL
