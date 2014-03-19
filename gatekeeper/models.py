@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -34,7 +33,7 @@ class ModeratedObject(models.Model):
 
     moderation_status = models.IntegerField(choices=STATUS_CHOICES,
                                 verbose_name=_('moderation status'))
-    moderation_status_by = models.ForeignKey(get_user_model(), blank=True, null=True,
+    moderation_status_by = models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True,
                                 verbose_name=_('moderation status by'))
     moderation_status_date = models.DateTimeField(blank=True, null=True,
                                 verbose_name=_('moderation status date'))
@@ -42,7 +41,7 @@ class ModeratedObject(models.Model):
                                 verbose_name=_('moderation reason'))
 
     flagged = models.BooleanField(default=False, verbose_name=_('flagged'))
-    flagged_by = models.ForeignKey(get_user_model(), blank=True, null=True,
+    flagged_by = models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True,
                                    related_name='flagged objects',
                                    verbose_name=_('flagged by'))
     flagged_date = models.DateTimeField(blank=True, null=True,
@@ -54,7 +53,7 @@ class ModeratedObject(models.Model):
     content_object = generic.GenericForeignKey('content_type', 'object_id')
 
     created_ip = models.IPAddressField(_('Created user IP'), blank=True, null=True)
-    created_by = models.ForeignKey(get_user_model(), blank=True, null=True, \
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, \
                                    related_name="created_moderated_objects",
                                    verbose_name=_('created by'))
 
