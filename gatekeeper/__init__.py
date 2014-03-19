@@ -4,7 +4,7 @@ __copyright__ = "Copyright (c) 2010 Sunlight Labs"
 __license__ = "BSD"
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
@@ -27,6 +27,8 @@ post_moderation = Signal(providing_args=["instance"])
 post_flag = Signal(providing_args=["instance"])
 
 def _get_automod_user():
+    User = get_user_model()
+
     try:
         return User.objects.get(username__exact="gatekeeper_automod")
     except User.DoesNotExist:
