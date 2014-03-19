@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -14,6 +14,8 @@ STATUS_CHOICES = (
 )
 
 STATUS_ON_FLAG = getattr(settings, "GATEKEEPER_STATUS_ON_FLAG", None)
+
+User = get_user_model()
 
 class ModeratedObjectManager(models.Manager):
 
