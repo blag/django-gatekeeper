@@ -76,7 +76,8 @@ The custom manager returns a special GatekeeperQuerySet with a few extra filters
     >>> MyModel.objects.all().approved()     # approved by moderator
     >>> MyModel.objects.all().pending()      # pending in moderation queue
     >>> MyModel.objects.all().rejected()     # rejected by moderator
-    >>> MyModel.objects.all().flagged()      # flagged 
+    >>> MyModel.objects.all().not_rejected() # approved by moderator and pending in moderation queue
+    >>> MyModel.objects.all().flagged()      # flagged
     >>> MyModel.objects.all().not_flagged()  # not flagged
 
 These are implemented on the `GatekeeperQuerySet` itself so that they can be chained:
